@@ -6,7 +6,7 @@ use Net::DNS::Resolver;
 use Net::Whois::IP qw(whoisip_query);
 
 # takes the stuff from my router and looks at traffic hogs
-# also does light investigation to see if they are known/dangerous
+# also does light investigation to help me see if they need more investigation
 
 # here is a sample output from the 500 log entry sample attached
 # COUNT, IP, DNS/NAME, PORTSLIST
@@ -33,6 +33,9 @@ use Net::Whois::IP qw(whoisip_query);
 # etc, etc
 
 
+# fixme:  do a proper open and csv/xlsx creation instead of what I've done 
+# console redirects are quick and dirty, but not the way I should do this
+
 # holds all destinations as a hash of arrays 
 # the arrays are duplicated ports until we process further
 my %conns;
@@ -54,8 +57,8 @@ foreach my $data (@data) {
 
     # I'm only interested in the blocked stuff
     # so I can update my firewall rules and allow things that are safe
+    # or so I can stop logging stuff that is just noise, etc
     my $action = $line[5];
-
     if ($action =~/Denied/) {
 
         # extract chunks we want to investigate
@@ -72,7 +75,7 @@ foreach my $data (@data) {
         $conns_count{$dest}++;
     } else {
         # using warn so I can capture other prints, warn doesn't go through > redirect
-        # fixme:  I should really open a CSV instead of macguyver my own version
+        # fixme:  I should really open a CSV instead of macguyvering my own version of CSV
         # in practice this spits out the "allowed" connections to console during runtime
         warn "LOG ENTRY ERROR:  $data\n";
     }
@@ -151,10 +154,10 @@ foreach my $ip (sort keys %conns){
 
         }
     # ok, we think we know what this is, now, what ports does it use?
-    # first, get a reference to the array stored in this key value
+    # first, get a reference to the array stored in this key value from my %conns hash
     my $ports = $conns{$ip};
 
-    # now, get a unique list from the array dereference
+    # now, get a unique list from the array dereference using the perlfaq4 dedupe
     my @unique_ports = uniq(@$ports);
 
     # then simply print them out
@@ -168,7 +171,8 @@ foreach my $ip (sort keys %conns){
 
 
 
-
+# fixme: this was a quick sample to test as I went through iterations of code
+# ideally I'd open the entire log file and parse it instead of this way
 __DATA__
 May 26 07:45:39 [ 1494.581407] Firewall: Denied CONN=lan MAC=10:56:ca:66:ba:60:a0:cc:2b:b6:eb:98:08:00 SRC=192.168.1.175 DST=149.154.167.50 LEN=60 TOS=0x00 PREC=0x00 TTL=63 ID=54172 DF PROTO=TCP SPT=38900 DPT=5222 WINDOW=65535 RES=0x00 SYN URGP=0 MARK=0x3
 May 26 07:45:35 [ 1490.572956] Firewall: Denied CONN=lan MAC=10:56:ca:66:ba:60:a0:cc:2b:b6:eb:98:08:00 SRC=192.168.1.175 DST=149.154.167.50 LEN=60 TOS=0x00 PREC=0x00 TTL=63 ID=54171 DF PROTO=TCP SPT=38900 DPT=5222 WINDOW=65535 RES=0x00 SYN URGP=0 MARK=0x3
